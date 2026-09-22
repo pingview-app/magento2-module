@@ -1,12 +1,11 @@
-agy# PingView for Magento 2 — capability record
+# PingView for Magento 2 — capability record
 
-What this module does, where each thing renders, and what it talks to. One of
-three sibling records with the same structure
-([WordPress](../wordpress-plugin/CAPABILITIES.md),
-[PrestaShop](../presta-plugin/CAPABILITIES.md)) so the three can be read
-side by side; `CT-PARITY` is the rule they are held to.
+What this module does, where each thing renders, and what it talks to. The
+PingView plugins for WordPress and PrestaShop keep records with the same
+structure, so the three panels can be read side by side and held to the same
+set of capabilities.
 
-Last verified: 2026-08-25 against module 1.2.0.
+Last verified: 2026-09-22 against module 1.2.1.
 
 ## 1. Identity
 
@@ -34,7 +33,7 @@ The setup screen re-opens with the API-key form expanded when provisioning was
 refused with `USER_EXISTS` / `DUPLICATE_MONITOR`, because for an existing
 account that form is the only way forward.
 
-## 3. Capabilities (CT-PARITY)
+## 3. Capabilities
 
 All 20 contract capabilities render here. Each carries its
 `data-pv-capability` marker in `view/adminhtml/templates/dashboard.phtml`;

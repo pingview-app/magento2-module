@@ -13,6 +13,7 @@
 /.github         export-ignore
 /AGENTS.md       export-ignore
 /CAPABILITIES.md export-ignore
+/CONTRIBUTING.md export-ignore
 /Test            export-ignore
 /.claude         export-ignore
 /*.ps1           export-ignore

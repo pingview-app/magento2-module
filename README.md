@@ -52,45 +52,27 @@ existing-account option and paste a write-scoped PingView API key.
 - The API key is encrypted with Magento's configured encryption key before it enters `core_config_data`.
 - API responses are escaped by Magento templates and cached for five minutes. A last-known result can be shown during a temporary API failure.
 - Disconnect removes local credentials only. Monitoring continues in PingView.
-- Status is rendered from the public API according to `BR-STATUS-01` / `CT-STATUS`; availability and incident state are never recomputed by this module.
+- Status, availability and incident state are computed by PingView and displayed as received. The module never recalculates them, so the panel, the PingView dashboard and any public status page always agree.
 
-## Scope
+## What the panel shows
 
-The module renders all twenty capabilities of `CT-PARITY`, the contract that
-keeps this panel, the WordPress plugin and the PrestaShop module showing one
-product. See [CAPABILITIES.md](CAPABILITIES.md) for what each one is, where it
-renders and what it reads.
+Uptime and response time, the result from each monitoring location, incidents,
+certificate and domain expiry, security headers, a Lighthouse quality report,
+and whether this store's own cron is still running. It is the same set the
+PingView plugins for WordPress and PrestaShop show, so a merchant running more
+than one platform reads one product. [CAPABILITIES.md](https://github.com/pingview-app/magento2-module/blob/main/CAPABILITIES.md) lists
+every card and what it reads.
 
-Deferred: per-store-view monitors, automatic (rather than one-click) URL
-resync, and rendering the checkout journey's verification state.
+Not supported yet: a separate monitor per store view, automatic (rather than
+one-click) repointing after the base URL changes, and the verification state of
+the synthetic checkout journey.
 
-## Checks
+## Translations
 
-`Test/` is excluded from the Composer archive, so these run from a clone of the
-repository, not from `vendor/pingview/module-monitoring`.
+The admin UI ships English source strings and a Polish translation
+(`i18n/pl_PL.csv`).
 
-Neither smoke test needs a Magento installation:
+## Contributing
 
-```bash
-php Test/status-view-smoke.php   # the shared view model
-php Test/parity-smoke.php        # CT-PARITY capability coverage
-```
-
-`parity-smoke.php` compares the panel against a contract held in the PingView
-backend repository. That repository is checked out beside this one only on a
-full PingView working copy, so in a standalone clone the test reports SKIPPED
-instead of failing.
-
-The unit tests and the compile check need a Magento development installation
-with this module in `app/code`:
-
-```bash
-vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist app/code/PingView/Monitoring/Test/Unit
-bin/magento setup:di:compile
-```
-
-Build the release archive on Windows with `./build-module-zip.ps1`. It delegates
-to `git archive`, so the ZIP and the Composer download contain exactly the same
-files, and it archives committed content only.
-
-The admin UI ships an English source and a Polish translation (`i18n/pl_PL.csv`).
+Tests, the release procedure and how the panel is kept in step with the other
+PingView plugins: [CONTRIBUTING.md](https://github.com/pingview-app/magento2-module/blob/main/CONTRIBUTING.md).
