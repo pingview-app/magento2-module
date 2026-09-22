@@ -5,6 +5,7 @@ namespace PingView\Monitoring\Block\Adminhtml;
 
 use Magento\Backend\Block\Template;
 use Magento\Backend\Model\Auth\Session;
+use Magento\Backend\Model\Session as BackendSession;
 use Magento\Framework\AuthorizationInterface;
 use Magento\Framework\Locale\ResolverInterface;
 use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
@@ -39,6 +40,7 @@ class Dashboard extends Template
         private readonly ShopProfile $shopProfile,
         private readonly SchedulerDiagnosis $scheduler,
         private readonly Session $authSession,
+        private readonly BackendSession $backendSession,
         private readonly AuthorizationInterface $authorization,
         private readonly TimezoneInterface $timezone,
         private readonly ResolverInterface $localeResolver,
@@ -73,6 +75,24 @@ class Dashboard extends Template
     {
         $user = $this->authSession->getUser();
         return $user ? (string)$user->getEmail() : '';
+    }
+
+    /**
+     * The last provisioning attempt, if it came back here: what the admin
+     * typed and, when it failed, why. Read once and cleared, so a refresh
+     * shows a clean form.
+     *
+     * @return array{email: string, consent: bool, error: string}
+     */
+    public function getSetupForm(): array
+    {
+        $form = (array)($this->backendSession->getPingviewSetupForm(true) ?: []);
+
+        return [
+            'email' => (string)($form['email'] ?? '') ?: $this->getSuggestedEmail(),
+            'consent' => !empty($form['consent']),
+            'error' => (string)($form['error'] ?? ''),
+        ];
     }
 
     public function getStoreUrl(): string

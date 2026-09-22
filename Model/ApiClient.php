@@ -177,11 +177,11 @@ final class ApiClient
             $status = $this->http->getStatus();
             $decoded = $this->json->unserialize($this->http->getBody());
         } catch (\Throwable $error) {
-            return ['ok' => false, 'status' => 0, 'code' => '', 'data' => [], 'error' => $error->getMessage()];
+            return ['ok' => false, 'status' => 0, 'code' => '', 'data' => [], 'details' => [], 'error' => $error->getMessage()];
         }
 
         if (!is_array($decoded)) {
-            return ['ok' => false, 'status' => $status, 'code' => '', 'data' => [], 'error' => 'PingView returned an unreadable response.'];
+            return ['ok' => false, 'status' => $status, 'code' => '', 'data' => [], 'details' => [], 'error' => 'PingView returned an unreadable response.'];
         }
         if ($status >= 400 || empty($decoded['success'])) {
             return [
@@ -192,10 +192,13 @@ final class ApiClient
                 // form instead of leaving the merchant on a dead end.
                 'code' => (string)($decoded['error']['code'] ?? ''),
                 'data' => [],
+                // Field-level validation rows, when the API sent them. Rendered
+                // through StatusView::sanitizeDetails() like the WordPress plugin.
+                'details' => (array)($decoded['error']['details'] ?? []),
                 'error' => (string)($decoded['error']['message'] ?? 'PingView rejected the request.'),
             ];
         }
 
-        return ['ok' => true, 'status' => $status, 'code' => '', 'data' => (array)($decoded['data'] ?? []), 'error' => ''];
+        return ['ok' => true, 'status' => $status, 'code' => '', 'data' => (array)($decoded['data'] ?? []), 'details' => [], 'error' => ''];
     }
 }

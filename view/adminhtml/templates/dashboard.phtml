@@ -12,26 +12,36 @@ $connected = $block->isConnected();
 ?>
 <div class="pv">
     <?php if (!$connected): ?>
+        <?php $setup = $block->getSetupForm(); ?>
         <section class="pv-card pv-setup">
-            <p class="pv-eyebrow"><?= $block->escapeHtml(__('External uptime monitoring')) ?></p>
-            <h1><?= $block->escapeHtml(__('Start monitoring this store')) ?></h1>
+            <h2 class="pv-setup-title"><?= $block->escapeHtml(__('Start monitoring this store')) ?></h2>
             <p class="pv-lead">
                 <?= $block->escapeHtml(__('PingView checks your storefront from outside your server. No monitoring jobs run on customer requests.')) ?>
             </p>
+            <ul class="pv-benefits">
+                <li><strong><?= $block->escapeHtml(__('External checks')) ?></strong><span><?= $block->escapeHtml(__('Independent of this Magento server')) ?></span></li>
+                <li><strong><?= $block->escapeHtml(__('Actionable alerts')) ?></strong><span><?= $block->escapeHtml(__('Email, Slack and webhook channels')) ?></span></li>
+                <li><strong><?= $block->escapeHtml(__('Storefront risks')) ?></strong><span><?= $block->escapeHtml(__('SSL and domain expiry tracking')) ?></span></li>
+            </ul>
 
             <?php if ($block->canManage()): ?>
-                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/provision')) ?>" method="post" class="pv-form">
+                <?php if ($setup['error'] !== ''): ?>
+                    <p id="pv-setup-error" class="pv-notice pv-notice-warn" role="alert">
+                        <?= $block->escapeHtml($setup['error']) ?>
+                    </p>
+                <?php endif; ?>
+                <form id="pv-provision-form" action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/provision')) ?>" method="post" class="pv-form">
                     <?= $block->getBlockHtml('formkey') ?>
                     <label for="pv-email"><?= $block->escapeHtml(__('Where should we send alerts?')) ?></label>
                     <input id="pv-email" name="email" type="email" required
-                           value="<?= $block->escapeHtmlAttr($block->getSuggestedEmail()) ?>"
+                           value="<?= $block->escapeHtmlAttr($setup['email']) ?>"
                            placeholder="email@example.com"
-                           aria-describedby="pv-email-help">
+                           aria-describedby="<?= $setup['error'] !== '' ? 'pv-setup-error ' : '' ?>pv-email-help"<?= $setup['error'] !== '' ? ' aria-invalid="true"' : '' ?>>
                     <p id="pv-email-help" class="pv-help">
                         <?= $block->escapeHtml(__('This creates a PingView account at that address and emails a sign-in link to it. No password to set or remember.')) ?>
                     </p>
                     <label class="pv-consent" for="pv-consent">
-                        <input id="pv-consent" name="consent" type="checkbox" value="1" required>
+                        <input id="pv-consent" name="consent" type="checkbox" value="1" required<?= $setup['consent'] ? ' checked' : '' ?>>
                         <span>
                             <?= $block->escapeHtml(__('Send my email address, store name and domain to PingView to create external monitoring for')) ?>
                             <strong class="pv-mono"><?= $block->escapeHtml($block->getStoreHost()) ?></strong>.
@@ -41,13 +51,19 @@ $connected = $block->isConnected();
                             <a href="https://pingview.app/en/privacy-policy" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Privacy Policy')) ?></a>.
                         </span>
                     </label>
-                    <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Start free monitoring')) ?></span></button>
+                    <button type="submit" class="action-primary pv-primary" data-busy-label="<?= $block->escapeHtmlAttr(__('Creating your account…')) ?>"><span><?= $block->escapeHtml(__('Start free monitoring')) ?></span></button>
+                    <p class="pv-help"><?= $block->escapeHtml(__('Free plan, no card. You can add more monitors or upgrade later.')) ?></p>
                 </form>
+                <?= /* @noEscape */ $secureRenderer->renderEventListenerAsTag(
+                    'onsubmit',
+                    "var b=this.querySelector('button[type=submit]');b.disabled=true;b.firstElementChild.textContent=b.getAttribute('data-busy-label');",
+                    '#pv-provision-form'
+                ) ?>
 
                 <details class="pv-existing"<?= $block->shouldOpenConnect() ? ' open' : '' ?>>
                     <summary><?= $block->escapeHtml(__('Already use PingView? Connect an API key')) ?></summary>
                     <?php if ($block->shouldOpenConnect()): ?>
-                        <p class="pv-notice pv-notice-neutral">
+                        <p class="pv-notice pv-notice-neutral" role="status">
                             <?= $block->escapeHtml(__('That address already has a PingView account, so this store connects with an API key instead. Sign in, copy a write-scoped key, and paste it below. An existing monitor for this domain is reused, not duplicated.')) ?>
                         </p>
                     <?php endif; ?>
@@ -57,7 +73,7 @@ $connected = $block->isConnected();
                         <div class="pv-inline">
                             <input id="pv-api-key" name="api_key" type="password" required autocomplete="off"
                                    class="pv-mono" placeholder="pk_live_..." aria-describedby="pv-api-key-help">
-                            <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Connect')) ?></span></button>
+                            <button type="submit" class="action-secondary"><span><?= $block->escapeHtml(__('Connect')) ?></span></button>
                         </div>
                         <p id="pv-api-key-help" class="pv-help">
                             <?= $block->escapeHtml(__('Create or copy one in')) ?>
@@ -66,15 +82,9 @@ $connected = $block->isConnected();
                     </form>
                 </details>
             <?php else: ?>
-                <p class="pv-notice pv-notice-neutral"><?= $block->escapeHtml(__('Ask an administrator with PingView manage permission to connect this store.')) ?></p>
+                <p class="pv-notice pv-notice-neutral"><?= $block->escapeHtml(__('Your role can view this panel but not connect the store. Ask an administrator to grant the "Connect and disconnect PingView" resource under System > Permissions > User Roles.')) ?></p>
             <?php endif; ?>
         </section>
-
-        <ul class="pv-benefits">
-            <li><strong><?= $block->escapeHtml(__('External checks')) ?></strong><span><?= $block->escapeHtml(__('Independent of this Magento server')) ?></span></li>
-            <li><strong><?= $block->escapeHtml(__('Actionable alerts')) ?></strong><span><?= $block->escapeHtml(__('Email, Slack and webhook channels')) ?></span></li>
-            <li><strong><?= $block->escapeHtml(__('Storefront risks')) ?></strong><span><?= $block->escapeHtml(__('SSL and domain expiry tracking')) ?></span></li>
-        </ul>
     <?php else: ?>
         <?php
         $snapshot = $block->getSnapshot();
@@ -244,7 +254,8 @@ $connected = $block->isConnected();
                                             <?php if ($page['monitored']): ?>
                                                 <span class="pv-dot pv-bg-ok" aria-hidden="true"></span>
                                             <?php elseif ($manage): ?>
-                                                <input type="checkbox" name="pages[]" value="<?= $block->escapeHtmlAttr($page['url']) ?>"<?= $page['default_checked'] ? ' checked' : '' ?>>
+                                                <input type="checkbox" id="pv-page-<?= $block->escapeHtmlAttr($page['key']) ?>" name="pages[]" value="<?= $block->escapeHtmlAttr($page['url']) ?>"<?= $page['default_checked'] ? ' checked' : '' ?>
+                                                       aria-label="<?= $block->escapeHtmlAttr(__('Monitor %1', __($page['label']))) ?>">
                                             <?php else: ?>
                                                 <span class="pv-dot pv-bg-neutral" aria-hidden="true"></span>
                                             <?php endif; ?>

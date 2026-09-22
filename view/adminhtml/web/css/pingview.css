@@ -2,6 +2,7 @@
     --pv-ink: oklch(23% 0.018 275);
     --pv-muted: oklch(48% 0.018 275);
     --pv-line: oklch(90% 0.012 275);
+    --pv-field-line: oklch(64% 0.02 275);
     --pv-surface: oklch(99% 0.004 275);
     --pv-accent: oklch(51% 0.23 278);
     --pv-accent-hover: oklch(45% 0.23 278);
@@ -22,7 +23,10 @@
 .pv form { margin-top: 0; }
 .pv h1 { margin-bottom: 5px; font-size: 26px; line-height: 1.2; }
 .pv h2 { margin-bottom: 16px; font-size: 14px; font-weight: 650; }
-.pv a { color: var(--pv-accent); }
+.pv a { color: var(--pv-accent); text-decoration: underline; text-underline-offset: 2px; }
+.pv a.action-primary,
+.pv a.action-secondary,
+.pv a.pv-block { text-decoration: none; }
 .pv-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 .pv-muted { color: var(--pv-muted); }
 .pv-tone-ok { color: var(--pv-ok); }
@@ -40,8 +44,8 @@
 }
 
 .pv-setup { max-width: 650px; padding: 32px; }
-.pv-eyebrow { margin-bottom: 8px; color: var(--pv-accent); font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
-.pv-lead { max-width: 65ch; margin-bottom: 24px; color: var(--pv-muted); font-size: 15px; }
+.pv-setup-title { margin-bottom: 6px; font-size: 22px; font-weight: 650; line-height: 1.2; }
+.pv-lead { max-width: 65ch; margin-bottom: 18px; color: var(--pv-muted); font-size: 15px; }
 .pv-form { display: flex; flex-direction: column; gap: 11px; }
 .pv-form > label:not(.pv-consent) { font-weight: 600; }
 .pv-form input[type="email"],
@@ -49,11 +53,12 @@
     width: 100%;
     min-height: 40px;
     padding: 8px 11px;
-    border: 1px solid var(--pv-line);
+    border: 1px solid var(--pv-field-line);
     border-radius: 6px;
     background: var(--pv-surface);
     color: var(--pv-ink);
 }
+.pv-form input[aria-invalid="true"] { border-color: var(--pv-bad); }
 .pv-form input:focus-visible,
 .pv button:focus-visible,
 .pv a:focus-visible,
@@ -61,17 +66,19 @@
 /* Belongs to the field above it, so it sits inside the group's gap, not beside it. */
 .pv-help { margin: -4px 0 2px; color: var(--pv-muted); font-size: 12.5px; }
 .pv-consent { display: flex; align-items: flex-start; gap: 10px; color: var(--pv-muted); font-size: 13px; }
-.pv-consent input { flex: none; margin-top: 3px; }
+.pv-consent input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; }
+.pv-consent .pv-mono { overflow-wrap: anywhere; }
 .pv-primary { background: var(--pv-accent) !important; border-color: var(--pv-accent) !important; }
 .pv-primary:hover { background: var(--pv-accent-hover) !important; border-color: var(--pv-accent-hover) !important; }
 /* `.pv a` paints links in the accent, which on an accent-filled button is the
    same colour on itself: invisible label, 1:1 contrast. Buttons opt out. */
 .pv a.pv-primary,
 .pv a.pv-primary:hover,
-.pv a.action-primary,
-.pv a.action-secondary { color: oklch(100% 0 0); }
+.pv a.action-primary { color: oklch(100% 0 0); }
 .pv a.action-secondary { color: var(--pv-ink); }
 .pv-form > .pv-primary { align-self: flex-start; margin-top: 4px; }
+.pv-form > .pv-primary:disabled { opacity: .7; cursor: progress; }
+.pv-form > .pv-primary + .pv-help { margin-top: 2px; }
 .pv-existing { max-width: 650px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--pv-line); }
 .pv-existing summary { cursor: pointer; color: var(--pv-accent); }
 .pv-existing[open] summary { margin-bottom: 16px; }
@@ -82,12 +89,13 @@
 .pv-benefits {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    max-width: 714px;
-    margin: 18px 0 0;
-    padding: 0;
+    margin: 0 0 24px;
+    padding: 14px 0;
+    border-top: 1px solid var(--pv-line);
+    border-bottom: 1px solid var(--pv-line);
     list-style: none;
 }
-.pv-benefits li { padding: 10px 18px; border-right: 1px solid var(--pv-line); }
+.pv-benefits li { padding: 0 18px; border-right: 1px solid var(--pv-line); }
 .pv-benefits li:first-child { padding-left: 0; }
 .pv-benefits li:last-child { border-right: 0; }
 .pv-benefits strong,

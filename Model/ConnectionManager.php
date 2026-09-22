@@ -5,6 +5,7 @@ namespace PingView\Monitoring\Model;
 
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Phrase;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -38,7 +39,7 @@ final class ConnectionManager
         );
         if (!$result['ok']) {
             throw new LocalizedException(
-                __($result['error'] ?: 'Could not connect to PingView.'),
+                __(self::failureMessage($result, __('Monitoring was not started.'))),
                 null,
                 self::failureCode($result)
             );
@@ -60,8 +61,11 @@ final class ConnectionManager
     public function connect(string $apiKey): void
     {
         $info = $this->api->tokenInfo($apiKey);
-        if (!$info['ok'] || empty($info['data']['valid']) || empty($info['data']['team']['id'])) {
-            throw new LocalizedException(__($info['error'] ?: 'That API key is invalid or expired.'));
+        if (!$info['ok']) {
+            throw new LocalizedException(__(self::failureMessage($info, __('The store was not connected.'))));
+        }
+        if (empty($info['data']['valid']) || empty($info['data']['team']['id'])) {
+            throw new LocalizedException(__('That API key is invalid or expired.'));
         }
 
         $storeUrl = $this->storeUrl();
@@ -92,7 +96,7 @@ final class ConnectionManager
                 'target' => $storeUrl,
             ]);
             if (!$created['ok']) {
-                throw new LocalizedException(__($created['error'] ?: 'Could not create a monitor for this store.'));
+                throw new LocalizedException(__(self::failureMessage($created, __('No monitor was created for this store.'))));
             }
 
             // POST /monitors nests the monitor one level deeper than the
@@ -128,7 +132,7 @@ final class ConnectionManager
 
         $result = $this->api->updateMonitorTarget($apiKey, $monitorId, $storeUrl);
         if (!$result['ok']) {
-            throw new LocalizedException(__($result['error'] ?: 'Could not repoint the monitor.'));
+            throw new LocalizedException(__(self::failureMessage($result, __('The monitor still checks the old address.'))));
         }
 
         $this->config->saveConnection($apiKey, $monitorId, $this->config->getTeamId(), $storeUrl);
@@ -217,7 +221,7 @@ final class ConnectionManager
             throw new LocalizedException(
                 $result['code'] === 'PLAN_GATE'
                     ? __('Watching Magento cron from outside needs a higher PingView plan.')
-                    : __($result['error'] ?: 'Could not turn on cron observation.')
+                    : __(self::failureMessage($result, __('Cron observation was not turned on.')))
             );
         }
 
@@ -244,7 +248,7 @@ final class ConnectionManager
         if ($existing['monitor_id'] !== '') {
             $paused = $this->api->setMonitorActive($apiKey, $existing['monitor_id'], false);
             if (!$paused['ok']) {
-                throw new LocalizedException(__($paused['error'] ?: 'Could not turn off cron observation.'));
+                throw new LocalizedException(__(self::failureMessage($paused, __('Cron observation was not turned off.'))));
             }
         }
 
@@ -285,6 +289,51 @@ final class ConnectionManager
         } catch (\Throwable $error) {
             $this->logger->info('PingView could not send the shop profile', ['exception' => $error]);
         }
+    }
+
+    /**
+     * The sentence an admin reads when a call to PingView failed.
+     *
+     * Same shape as the WordPress plugin's api_error_payload(): our own line
+     * names the action that failed, the API's text follows as the detail, and
+     * field-level validation rows are listed after it. Two classes get their
+     * own recovery step instead of the API text, because the API text is
+     * useless there: the request never reached PingView (status 0), or
+     * PingView itself failed (5xx) - the case that shipped as a bare
+     * "An unexpected error occurred during provisioning".
+     *
+     * @param array{status?: int, code?: string, error?: string, details?: mixed} $result
+     */
+    public static function failureMessage(array $result, Phrase $context): string
+    {
+        $status = (int)($result['status'] ?? 0);
+        $code = (string)($result['code'] ?? '');
+
+        if ($status === 0) {
+            return (string)__(
+                '%1 PingView could not be reached from this server. Check that outbound HTTPS to pingview.app is allowed, then try again.',
+                $context
+            );
+        }
+        if ($status >= 500 || $code === 'INTERNAL_SERVER_ERROR') {
+            return (string)__(
+                '%1 PingView could not complete the request and nothing was created. Try again in a minute; if it keeps failing, write to support@pingview.app and mention %2.',
+                $context,
+                gmdate('Y-m-d H:i') . ' UTC'
+            );
+        }
+
+        $details = StatusView::sanitizeDetails($result['details'] ?? null);
+        $parts = [(string)$context];
+        $apiText = trim((string)($result['error'] ?? ''));
+        if (StatusView::detailCarriesInfo($apiText, $details)) {
+            $parts[] = $apiText;
+        }
+        foreach ($details as $detail) {
+            $parts[] = $detail['field'] !== '' ? $detail['field'] . ': ' . $detail['message'] : $detail['message'];
+        }
+
+        return implode(' ', $parts);
     }
 
     /**
