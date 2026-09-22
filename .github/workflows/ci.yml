@@ -65,7 +65,7 @@ jobs:
         if: matrix.php == '8.1'
         run: |
           git archive --format=tar HEAD > dist.tar
-          if tar -tf dist.tar | grep -E '^(Test/|AGENTS\.md|CAPABILITIES.md|PUBLISHING.md|\.github/|build-module-zip\.ps1|\.gitignore|\.gitattributes)'; then
+          if tar -tf dist.tar | grep -E '^(Test/|AGENTS\.md|CAPABILITIES\.md|\.github/|\.claude/|.*\.ps1$|\.gitignore|\.gitattributes)'; then
             echo "::error::development files leaked into the dist archive"
             exit 1
           fi

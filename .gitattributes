@@ -13,6 +13,6 @@
 /.github         export-ignore
 /AGENTS.md       export-ignore
 /CAPABILITIES.md export-ignore
-/PUBLISHING.md   export-ignore
 /Test            export-ignore
-/build-module-zip.ps1 export-ignore
+/.claude         export-ignore
+/*.ps1           export-ignore
