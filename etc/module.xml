@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+    <module name="PingView_Monitoring">
+        <sequence>
+            <module name="Magento_Backend"/>
+            <module name="Magento_Config"/>
+            <module name="Magento_Store"/>
+            <!-- The panel reads the storefront's own addresses (cart, checkout,
+                 a product, a category) and its payment methods, so these load
+                 first. -->
+            <module name="Magento_Catalog"/>
+            <module name="Magento_Payment"/>
+            <!-- scheduler-watch reads cron_schedule, the table Magento_Cron owns.
+                 The read is guarded by isTableExists(), so a store without cron
+                 still renders the panel - but the dependency is real and is
+                 declared here and in composer.json rather than left implicit. -->
+            <module name="Magento_Cron"/>
+        </sequence>
+    </module>
+</config>

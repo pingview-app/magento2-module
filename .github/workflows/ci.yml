@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The range composer.json claims: Magento 2.4.4 runs 8.1, 2.4.8 runs 8.4.
+        php: ['8.1', '8.2', '8.3', '8.4']
+
+    name: PHP ${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-lock
+
+      - name: Lint PHP and templates
+        run: |
+          find . -name '*.php' -o -name '*.phtml' \
+            | xargs -n1 -P4 php -l > /dev/null
+
+      - name: Parse XML
+        run: |
+          for f in $(find . -name '*.xml'); do
+            php -r 'exit(simplexml_load_file($argv[1]) === false ? 1 : 0);' "$f" \
+              || { echo "malformed: $f"; exit 1; }
+          done
+
+      # Both run without a Magento installation. parity-smoke skips on its own
+      # when the backend contract repository is not checked out alongside.
+      - name: Smoke tests
+        run: |
+          php Test/status-view-smoke.php
+          php Test/parity-smoke.php
+
+      # composer.json carries no version field - Packagist takes it from the tag -
+      # so the tag and ApiClient::VERSION are two places that can disagree. They
+      # would disagree silently: Packagist would serve 1.3.0 while the module
+      # still announced 1.2.0 in its User-Agent and provisioning payload.
+      - name: Tag matches ApiClient::VERSION
+        if: startsWith(github.ref, 'refs/tags/') && matrix.php == '8.1'
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          code=$(php -r 'preg_match("/VERSION\s*=\s*\x27([^\x27]+)\x27/", file_get_contents("Model/ApiClient.php"), $m); echo $m[1];')
+          echo "tag=$tag  ApiClient::VERSION=$code"
+          [ "${tag#v}" = "$code" ] || { echo "::error::tag $tag does not match ApiClient::VERSION $code"; exit 1; }
+
+      # The archive a store actually receives. Fails the build if a development
+      # file loses its export-ignore and would start shipping into vendor/.
+      - name: Verify the dist archive carries no development files
+        if: matrix.php == '8.1'
+        run: |
+          git archive --format=tar HEAD > dist.tar
+          if tar -tf dist.tar | grep -E '^(Test/|AGENTS\.md|CAPABILITIES.md|PUBLISHING.md|\.github/|build-module-zip\.ps1|\.gitignore|\.gitattributes)'; then
+            echo "::error::development files leaked into the dist archive"
+            exit 1
+          fi
+          echo "dist entries: $(tar -tf dist.tar | wc -l)"

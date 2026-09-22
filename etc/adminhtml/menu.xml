@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+    Two nodes, not one, and the leaf id is not "dashboard".
+
+    A single leaf hung straight off Magento_Backend::system landed at the
+    column-group level of the System flyout, where every core neighbour
+    ("Data Transfer", "Permissions", "Tools") is a heading rather than a link.
+    Magento styles a link at that depth with .admin__menu-link(), whose :before
+    prints @icon-menu-item__content — the generic menu glyph — so the entry
+    showed a stray icon no other item in that panel has.
+
+    The id suffix matters too: Magento\Backend\Block\Menu builds the item class
+    from the part after "::", so id "…::dashboard" emitted class "item-dashboard",
+    the same hook core uses for its own sidebar Dashboard icon.
+
+    Shape below mirrors "Extensions > Integrations" in the same flyout: a group
+    heading with one item under it. The ACL resource stays PingView_Monitoring::dashboard.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="PingView_Monitoring::pingview"
+             title="PingView"
+             translate="title"
+             module="PingView_Monitoring"
+             sortOrder="90"
+             parent="Magento_Backend::system"
+             resource="PingView_Monitoring::dashboard"/>
+        <add id="PingView_Monitoring::monitoring"
+             title="Monitoring"
+             translate="title"
+             module="PingView_Monitoring"
+             sortOrder="10"
+             parent="PingView_Monitoring::pingview"
+             action="pingview/dashboard/index"
+             resource="PingView_Monitoring::dashboard"/>
+    </menu>
+</config>

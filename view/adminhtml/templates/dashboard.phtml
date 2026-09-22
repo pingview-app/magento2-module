@@ -1,0 +1,570 @@
+<?php
+/**
+ * @var \PingView\Monitoring\Block\Adminhtml\Dashboard $block
+ *
+ * Every card that delivers a CT-PARITY capability carries its
+ * `data-pv-capability` marker on the card root. The marker is what
+ * Test/parity-smoke.php reads: copy, classes and markup can all be refactored,
+ * but a capability that disappears from this panel and not from the WordPress
+ * and PrestaShop ones breaks the build.
+ */
+$connected = $block->isConnected();
+?>
+<div class="pv">
+    <?php if (!$connected): ?>
+        <section class="pv-card pv-setup">
+            <p class="pv-eyebrow"><?= $block->escapeHtml(__('External uptime monitoring')) ?></p>
+            <h1><?= $block->escapeHtml(__('Start monitoring this store')) ?></h1>
+            <p class="pv-lead">
+                <?= $block->escapeHtml(__('PingView checks your storefront from outside your server. No monitoring jobs run on customer requests.')) ?>
+            </p>
+
+            <?php if ($block->canManage()): ?>
+                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/provision')) ?>" method="post" class="pv-form">
+                    <?= $block->getBlockHtml('formkey') ?>
+                    <label for="pv-email"><?= $block->escapeHtml(__('Where should we send alerts?')) ?></label>
+                    <input id="pv-email" name="email" type="email" required
+                           value="<?= $block->escapeHtmlAttr($block->getSuggestedEmail()) ?>"
+                           placeholder="email@example.com"
+                           aria-describedby="pv-email-help">
+                    <p id="pv-email-help" class="pv-help">
+                        <?= $block->escapeHtml(__('This creates a PingView account at that address and emails a sign-in link to it. No password to set or remember.')) ?>
+                    </p>
+                    <label class="pv-consent" for="pv-consent">
+                        <input id="pv-consent" name="consent" type="checkbox" value="1" required>
+                        <span>
+                            <?= $block->escapeHtml(__('Send my email address, store name and domain to PingView to create external monitoring for')) ?>
+                            <strong class="pv-mono"><?= $block->escapeHtml($block->getStoreHost()) ?></strong>.
+                            <?= $block->escapeHtml(__('I agree to the')) ?>
+                            <a href="https://pingview.app/en/terms-of-service" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Terms')) ?></a>
+                            <?= $block->escapeHtml(__('and acknowledge the')) ?>
+                            <a href="https://pingview.app/en/privacy-policy" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Privacy Policy')) ?></a>.
+                        </span>
+                    </label>
+                    <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Start free monitoring')) ?></span></button>
+                </form>
+
+                <details class="pv-existing"<?= $block->shouldOpenConnect() ? ' open' : '' ?>>
+                    <summary><?= $block->escapeHtml(__('Already use PingView? Connect an API key')) ?></summary>
+                    <?php if ($block->shouldOpenConnect()): ?>
+                        <p class="pv-notice pv-notice-neutral">
+                            <?= $block->escapeHtml(__('That address already has a PingView account, so this store connects with an API key instead. Sign in, copy a write-scoped key, and paste it below. An existing monitor for this domain is reused, not duplicated.')) ?>
+                        </p>
+                    <?php endif; ?>
+                    <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/connect')) ?>" method="post" class="pv-form pv-token-form">
+                        <?= $block->getBlockHtml('formkey') ?>
+                        <label for="pv-api-key"><?= $block->escapeHtml(__('API key')) ?></label>
+                        <div class="pv-inline">
+                            <input id="pv-api-key" name="api_key" type="password" required autocomplete="off"
+                                   class="pv-mono" placeholder="pk_live_..." aria-describedby="pv-api-key-help">
+                            <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Connect')) ?></span></button>
+                        </div>
+                        <p id="pv-api-key-help" class="pv-help">
+                            <?= $block->escapeHtml(__('Create or copy one in')) ?>
+                            <a href="<?= $block->escapeUrl($block->getApiKeysUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('PingView API keys')) ?></a>.
+                        </p>
+                    </form>
+                </details>
+            <?php else: ?>
+                <p class="pv-notice pv-notice-neutral"><?= $block->escapeHtml(__('Ask an administrator with PingView manage permission to connect this store.')) ?></p>
+            <?php endif; ?>
+        </section>
+
+        <ul class="pv-benefits">
+            <li><strong><?= $block->escapeHtml(__('External checks')) ?></strong><span><?= $block->escapeHtml(__('Independent of this Magento server')) ?></span></li>
+            <li><strong><?= $block->escapeHtml(__('Actionable alerts')) ?></strong><span><?= $block->escapeHtml(__('Email, Slack and webhook channels')) ?></span></li>
+            <li><strong><?= $block->escapeHtml(__('Storefront risks')) ?></strong><span><?= $block->escapeHtml(__('SSL and domain expiry tracking')) ?></span></li>
+        </ul>
+    <?php else: ?>
+        <?php
+        $snapshot = $block->getSnapshot();
+        $status = $block->getStatus();
+        $meta = $block->describeStatus($status['status'] ?? 'unknown');
+        $attention = $block->getAttention();
+        $latency = $block->getResponseLatency();
+        $manage = $block->canManage();
+        ?>
+        <header class="pv-head">
+            <div class="pv-status-heading">
+                <span class="pv-status-icon pv-tone-<?= $block->escapeHtmlAttr($meta['tone']) ?>" aria-hidden="true"><?= $block->escapeHtml($meta['icon']) ?></span>
+                <div>
+                    <h1 class="pv-tone-<?= $block->escapeHtmlAttr($meta['tone']) ?>" data-pv-capability="status-pill"><?= $block->escapeHtml(__($meta['label'])) ?></h1>
+                    <p class="pv-mono"><?= $block->escapeHtml($block->getMonitorTarget()) ?></p>
+                </div>
+            </div>
+            <div class="pv-actions">
+                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/refresh')) ?>" method="post">
+                    <?= $block->getBlockHtml('formkey') ?>
+                    <button type="submit" class="action-secondary"><span><?= $block->escapeHtml(__('Refresh')) ?></span></button>
+                </form>
+                <a href="<?= $block->escapeUrl($block->getDashboardUrl()) ?>" class="action-primary pv-primary" target="_blank" rel="noopener noreferrer">
+                    <span><?= $block->escapeHtml(__('Open PingView')) ?></span>
+                </a>
+            </div>
+        </header>
+
+        <?php if ($block->hasStoreUrlChanged()): ?>
+            <div class="pv-notice pv-notice-warn" data-pv-capability="target-resync">
+                <p><?= $block->escapeHtml(__('This store now answers on a different address than the one being monitored. Until the monitor is repointed, checks keep hitting the old address and the certificate on the new one is never read.')) ?></p>
+                <p class="pv-mono pv-small"><?= $block->escapeHtml($block->getMonitorTarget()) ?> &rarr; <?= $block->escapeHtml($block->getStoreUrl()) ?></p>
+                <?php if ($manage): ?>
+                    <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/resync')) ?>" method="post">
+                        <?= $block->getBlockHtml('formkey') ?>
+                        <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Monitor the current address')) ?></span></button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($snapshot['error'])): ?>
+            <p class="pv-notice pv-notice-warn">
+                <?= $block->escapeHtml($snapshot['stale'] ? __('Showing the last known status because PingView could not be reached.') : __('Status is temporarily unavailable.')) ?>
+            </p>
+        <?php endif; ?>
+
+        <?php if ($block->hasResults()): ?>
+            <section class="pv-kpis" aria-label="<?= $block->escapeHtmlAttr(__('Store health summary')) ?>" data-pv-capability="kpi-strip">
+                <div>
+                    <span><?= $block->escapeHtml(__('Status')) ?></span>
+                    <strong class="pv-tone-<?= $block->escapeHtmlAttr($meta['tone']) ?> pv-small-value"><?= $block->escapeHtml(__($meta['label'])) ?></strong>
+                </div>
+                <div>
+                    <span><?= $block->escapeHtml(__('Uptime, 24h')) ?></span>
+                    <strong class="pv-mono"><?= $block->getUptime('last24h') !== null ? $block->escapeHtml(number_format($block->getUptime('last24h'), 2) . '%') : '–' ?></strong>
+                </div>
+                <div>
+                    <span><?= $block->escapeHtml($latency['from_locations'] ? __('Response time, median') : __('Response time')) ?></span>
+                    <strong class="pv-mono pv-tone-<?= $block->escapeHtmlAttr($block->getLatencyTone($latency['value'])) ?>"><?= $latency['value'] !== null ? $block->escapeHtml($latency['value'] . ' ms') : '–' ?></strong>
+                    <?php $slowThreshold = $block->getSlowThreshold(); ?>
+                    <?php if ($latency['from_locations'] && $slowThreshold !== null): ?>
+                        <span><?= $block->escapeHtml(__('Median of %1 locations · slow above %2 ms', $latency['count'], $slowThreshold)) ?></span>
+                    <?php elseif ($latency['from_locations']): ?>
+                        <span><?= $block->escapeHtml(__('Median of %1 locations', $latency['count'])) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <span><?= $block->escapeHtml(__('Needs attention')) ?></span>
+                    <strong class="pv-tone-<?= $block->escapeHtmlAttr($attention['tone']) ?> pv-small-value">
+                        <?= $attention['count'] === 0 ? $block->escapeHtml(__('All clear')) : $block->escapeHtml(__('%1 to fix', $attention['count'])) ?>
+                    </strong>
+                </div>
+            </section>
+
+            <?php if ($attention['count'] > 0): ?>
+                <section class="pv-card" data-pv-capability="action-items">
+                    <h2><?= $block->escapeHtml(__('Worth fixing')) ?></h2>
+                    <ul class="pv-list pv-action-items">
+                        <?php foreach ($attention['items'] as $item): ?>
+                            <li>
+                                <span class="pv-dot pv-bg-<?= $block->escapeHtmlAttr($item['tone']) ?>" aria-hidden="true"></span>
+                                <span>
+                                    <strong><?= $block->escapeHtml($item['title']) ?></strong>
+                                    <?php if ($item['description'] !== ''): ?><span class="pv-muted pv-block"><?= $block->escapeHtml($item['description']) ?></span><?php endif; ?>
+                                </span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <p class="pv-card-foot pv-muted"><?= $block->escapeHtml(__('Ordered by what can break the store first.')) ?></p>
+                </section>
+            <?php endif; ?>
+
+            <div class="pv-columns">
+                <div class="pv-col">
+                    <section class="pv-card" data-pv-capability="availability">
+                        <h2><?= $block->escapeHtml(__('Availability')) ?></h2>
+                        <dl class="pv-facts">
+                            <dt><?= $block->escapeHtml(__('Last 24 hours')) ?></dt>
+                            <dd class="pv-mono"><?= $block->getUptime('last24h') !== null ? $block->escapeHtml(number_format($block->getUptime('last24h'), 2) . '%') : '–' ?></dd>
+                            <dt><?= $block->escapeHtml(__('Last 7 days')) ?></dt>
+                            <dd class="pv-mono"><?= $block->getUptime('last7d') !== null ? $block->escapeHtml(number_format($block->getUptime('last7d'), 2) . '%') : '–' ?></dd>
+                        </dl>
+                        <?php $blocks = $block->getUptimeBlocks(); ?>
+                        <?php if ($blocks): ?>
+                            <div class="pv-blocks" role="img" aria-label="<?= $block->escapeHtmlAttr(__('Availability over the last 24 hours')) ?>">
+                                <?php foreach ($blocks as $bucket): ?>
+                                    <span class="pv-block-cell pv-bg-<?= $block->escapeHtmlAttr($bucket['tone']) ?>"
+                                          title="<?= $block->escapeHtmlAttr($block->formatDateTime($bucket['timestamp'])) ?>"></span>
+                                <?php endforeach; ?>
+                            </div>
+                            <p class="pv-card-foot pv-muted"><?= $block->escapeHtml(__('One block per bucket, oldest on the left.')) ?></p>
+                        <?php endif; ?>
+
+                        <?php
+                        // Response time over the same window, from the same payload:
+                        // dataPoints[].latency arrived with the availability read and
+                        // was being thrown away. No extra request, no charting library.
+                        $spark = $block->getSparkline();
+                        $slow = $block->getSlowThreshold();
+                        ?>
+                        <?php if ($spark !== null): ?>
+                            <div class="pv-spark-wrap">
+                                <svg class="pv-spark" viewBox="0 0 <?= (int)$spark['width'] ?> <?= (int)$spark['height'] ?>"
+                                     preserveAspectRatio="none" role="img"
+                                     aria-label="<?= $block->escapeHtmlAttr(__('Response time over the last 24 hours, between %1 and %2 ms', $spark['low'], $spark['peak'])) ?>">
+                                    <?php if ($spark['threshold_y'] !== null): ?>
+                                        <line class="pv-spark-threshold" x1="0" y1="<?= (float)$spark['threshold_y'] ?>"
+                                              x2="<?= (int)$spark['width'] ?>" y2="<?= (float)$spark['threshold_y'] ?>" />
+                                    <?php endif; ?>
+                                    <polyline class="pv-spark-line" points="<?= $block->escapeHtmlAttr($spark['points']) ?>" />
+                                </svg>
+                                <p class="pv-spark-foot pv-muted">
+                                    <?= $slow !== null
+                                        ? $block->escapeHtml(__('Response time %1–%2 ms, averaged across locations. Dashed line: slow above %3 ms.', $spark['low'], $spark['peak'], $slow))
+                                        : $block->escapeHtml(__('Response time %1–%2 ms, averaged across locations.', $spark['low'], $spark['peak'])) ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="pv-card" data-pv-capability="watched">
+                        <h2><?= $block->escapeHtml(__('What is being watched')) ?></h2>
+                        <ul class="pv-checklist">
+                            <li><?= $block->escapeHtml(__('Uptime check every %1 min', $block->getCheckInterval())) ?></li>
+                            <li><?= $block->escapeHtml(__('Checks run from the external locations in your plan')) ?></li>
+                            <li><?= $block->escapeHtml(__('SSL certificate expiry')) ?></li>
+                            <li><?= $block->escapeHtml(__('Domain registration expiry')) ?></li>
+                        </ul>
+                        <p class="pv-card-foot pv-muted">
+                            <?= $block->escapeHtml(__('You are alerted on an outage, on an SSL certificate expiring within 30 days, and on a performance drop over 20 percent.')) ?>
+                        </p>
+                    </section>
+
+                    <section class="pv-card" data-pv-capability="monitored-pages">
+                        <h2><?= $block->escapeHtml(__('Other pages worth watching')) ?></h2>
+                        <p class="pv-muted">
+                            <?= $block->escapeHtml(__('PingView already knows these addresses because this module runs inside your store. This only checks that a page responds, it does not attempt to place an order.')) ?>
+                        </p>
+                        <?php $pages = $block->getMonitoredPages(); ?>
+                        <?php if ($pages): ?>
+                            <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/pages')) ?>" method="post">
+                                <?= $block->getBlockHtml('formkey') ?>
+                                <ul class="pv-list">
+                                    <?php foreach ($pages as $page): ?>
+                                        <li>
+                                            <?php if ($page['monitored']): ?>
+                                                <span class="pv-dot pv-bg-ok" aria-hidden="true"></span>
+                                            <?php elseif ($manage): ?>
+                                                <input type="checkbox" name="pages[]" value="<?= $block->escapeHtmlAttr($page['url']) ?>"<?= $page['default_checked'] ? ' checked' : '' ?>>
+                                            <?php else: ?>
+                                                <span class="pv-dot pv-bg-neutral" aria-hidden="true"></span>
+                                            <?php endif; ?>
+                                            <span class="pv-grow">
+                                                <?= $block->escapeHtml(__($page['label'])) ?>
+                                                <a class="pv-block pv-mono pv-small pv-truncate" href="<?= $block->escapeUrl($page['url']) ?>"
+                                                   title="<?= $block->escapeHtmlAttr($page['url']) ?>"
+                                                   target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml($page['url']) ?></a>
+                                            </span>
+                                            <?php if ($page['monitored']): ?>
+                                                <span class="pv-list-value pv-tone-ok"><?= $block->escapeHtml(__('Monitored')) ?></span>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <?php if ($manage): ?>
+                                    <p class="pv-card-foot">
+                                        <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Start monitoring the selected pages')) ?></span></button>
+                                    </p>
+                                <?php endif; ?>
+                            </form>
+                        <?php else: ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('No other customer facing pages could be found automatically.')) ?></p>
+                        <?php endif; ?>
+
+                        <?php
+                        // Same capability as the list above (CT-PARITY "monitored-pages"):
+                        // what of this store is under watch. Page discovery cannot propose
+                        // these - they were created in the PingView app, or point at an
+                        // address the store does not advertise - so without this section the
+                        // panel showed four pages while nine monitors ran against the host.
+                        //
+                        // A section rather than its own card: a second card would need a
+                        // second data-pv-capability, and every capability in the contract
+                        // must exist in the WordPress and PrestaShop panels too.
+                        $otherMonitors = $block->getOtherMonitors();
+                        ?>
+                        <?php if ($otherMonitors): ?>
+                            <p class="pv-card-foot pv-muted">
+                                <?= count($otherMonitors) === 1
+                                    ? $block->escapeHtml(__('PingView also watches 1 more address on this site:'))
+                                    : $block->escapeHtml(__('PingView also watches %1 more addresses on this site:', count($otherMonitors))) ?>
+                            </p>
+                            <ul class="pv-list pv-locations">
+                                <?php foreach ($otherMonitors as $other): ?>
+                                    <li>
+                                        <span class="pv-dot pv-bg-<?= $block->escapeHtmlAttr($other['tone']) ?>" aria-hidden="true"></span>
+                                        <span class="pv-grow pv-truncate">
+                                            <?= $block->escapeHtml($other['name']) ?>
+                                            <span class="pv-loc-reason pv-mono"><?= $block->escapeHtml($other['path']) ?></span>
+                                        </span>
+                                        <span class="pv-list-value pv-tone-<?= $block->escapeHtmlAttr($other['tone']) ?>">
+                                            <?= $other['latency'] !== null
+                                                ? $block->escapeHtml($other['latency'] . ' ms')
+                                                : $block->escapeHtml($other['status_label']) ?>
+                                        </span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </section>
+
+                    <?php $scheduler = $block->getScheduler(); ?>
+                    <section class="pv-card" data-pv-capability="scheduler-watch">
+                        <h2><?= $block->escapeHtml(__('Scheduled jobs (Magento cron)')) ?></h2>
+                        <?php if (!$scheduler['diagnosis']['known']): ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('The cron schedule could not be read, so nothing can be said about scheduled jobs here.')) ?></p>
+                        <?php elseif ($scheduler['diagnosis']['running']): ?>
+                            <p class="pv-muted">
+                                <?= $block->escapeHtml(__('Magento cron ran recently. %1 jobs are queued.', $scheduler['diagnosis']['pending'])) ?>
+                            </p>
+                        <?php elseif ($scheduler['diagnosis']['overdue']): ?>
+                            <p class="pv-tone-bad">
+                                <?= $block->escapeHtml(__('No cron job has run for over an hour. Indexers, order emails and scheduled prices stop while the storefront keeps answering normally.')) ?>
+                            </p>
+                            <p class="pv-muted pv-small"><?= $block->escapeHtml(__('Last run: %1', $block->formatDateTime($scheduler['diagnosis']['last_executed_at']))) ?></p>
+                        <?php else: ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('No cron job has ever run on this installation.')) ?></p>
+                        <?php endif; ?>
+
+                        <?php if ($scheduler['watch_enabled']): ?>
+                            <dl class="pv-facts">
+                                <dt><?= $block->escapeHtml(__('External observation')) ?></dt>
+                                <dd class="pv-tone-ok"><?= $block->escapeHtml(__('On')) ?></dd>
+                            </dl>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('Add this line to the same crontab that already runs Magento cron:')) ?></p>
+                            <pre class="pv-snippet"><code><?= $block->escapeHtml($scheduler['cron_line']) ?></code></pre>
+                            <?php if ($manage): ?>
+                                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/scheduler', ['enable' => 0])) ?>" method="post" class="pv-card-foot">
+                                    <?= $block->getBlockHtml('formkey') ?>
+                                    <button type="submit" class="action-secondary"><span><?= $block->escapeHtml(__('Turn off external observation')) ?></span></button>
+                                </form>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p class="pv-muted">
+                                <?= $block->escapeHtml(__('PingView can watch this from outside: a heartbeat monitor that expects a ping every few minutes, so a cron that silently stops is caught even while the store keeps answering normally.')) ?>
+                            </p>
+                            <?php if ($manage): ?>
+                                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/scheduler', ['enable' => 1])) ?>" method="post" class="pv-card-foot">
+                                    <?= $block->getBlockHtml('formkey') ?>
+                                    <button type="submit" class="action-primary pv-primary"><span><?= $block->escapeHtml(__('Watch Magento cron from outside')) ?></span></button>
+                                </form>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="pv-card" data-pv-capability="alert-channels">
+                        <h2><?= $block->escapeHtml(__('Where alerts are delivered')) ?></h2>
+                        <p class="pv-muted">
+                            <?= $block->escapeHtml(__('Email is on by default. Route incidents to the channel your team already watches, so nobody finds out from a customer.')) ?>
+                        </p>
+                        <ul class="pv-checklist">
+                            <li><?= $block->escapeHtml(__('Email')) ?></li>
+                            <li><?= $block->escapeHtml(__('Slack, Teams and Discord')) ?></li>
+                            <li><?= $block->escapeHtml(__('Webhooks')) ?></li>
+                        </ul>
+                        <p class="pv-card-foot">
+                            <a href="<?= $block->escapeUrl($block->getNotificationsUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Configure alert channels')) ?></a>
+                            &middot;
+                            <a href="<?= $block->escapeUrl($block->getReportsUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Set up the weekly summary')) ?></a>
+                        </p>
+                    </section>
+                </div>
+
+                <div class="pv-col">
+                    <?php $locations = $block->getLocations(); ?>
+                    <?php if ($locations): ?>
+                        <section class="pv-card" data-pv-capability="locations">
+                            <h2><?= $block->escapeHtml(__('Checked from %1 locations', $block->getCountedLocations())) ?></h2>
+                            <ul class="pv-list pv-locations">
+                                <?php foreach ($locations as $location): ?>
+                                    <li>
+                                        <span class="pv-dot pv-bg-<?= $block->escapeHtmlAttr($location['tone']) ?>" aria-hidden="true"></span>
+                                        <span class="pv-truncate"><?php if ($location['flag'] !== ''): ?><span class="pv-flag"><?= $block->escapeHtml($location['flag']) ?></span> <?php endif; ?><?= $block->escapeHtml($location['label']) ?></span>
+                                        <span class="pv-list-value<?= $location['mono'] ? ' pv-mono' : '' ?> pv-tone-<?= $block->escapeHtmlAttr($location['tone']) ?>" title="<?= $block->escapeHtmlAttr($location['status_label']) ?>"><?= $block->escapeHtml($location['value']) ?><?php if ($location['reason'] !== ''): ?> <span class="pv-loc-reason"><?= $block->escapeHtml($location['reason']) ?></span><?php endif; ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php if ($block->getSlowThreshold() !== null): ?>
+                                <p class="pv-card-foot">
+                                    <?= $block->escapeHtml(__('A check counts as slow above %1 ms.', $block->getSlowThreshold())) ?>
+                                    <a href="<?= $block->escapeUrl($block->getMonitorSettingsUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Change this threshold')) ?></a>
+                                </p>
+                            <?php endif; ?>
+                            <?php if ($block->getRetiredLocations() > 0): ?>
+                                <p class="pv-card-foot pv-muted">
+                                    <?= $block->getRetiredLocations() === 1
+                                        ? $block->escapeHtml(__('One configured location has left the monitoring fleet and is not counted.'))
+                                        : $block->escapeHtml(__('Some configured locations have left the monitoring fleet and are not counted.')) ?>
+                                </p>
+                            <?php endif; ?>
+                        </section>
+                    <?php endif; ?>
+
+                    <?php $ssl = $block->getSslRow(); $domain = $block->getDomainRow(); ?>
+                    <section class="pv-card" data-pv-capability="certificate">
+                        <h2><?= $block->escapeHtml(__('Certificate and domain')) ?></h2>
+                        <dl class="pv-facts">
+                            <dt><?= $block->escapeHtml(__('SSL certificate')) ?></dt>
+                            <dd class="pv-mono pv-tone-<?= $block->escapeHtmlAttr($ssl['tone']) ?>"><?= $block->escapeHtml($ssl['text']) ?></dd>
+                            <dt><?= $block->escapeHtml(__('Domain registration')) ?></dt>
+                            <dd class="pv-mono pv-tone-<?= $block->escapeHtmlAttr($domain['tone']) ?>"><?= $block->escapeHtml($domain['text']) ?></dd>
+                        </dl>
+                    </section>
+
+                    <?php $observatory = $block->getObservatory(); ?>
+                    <section class="pv-card" data-pv-capability="security-headers">
+                        <h2><?= $block->escapeHtml(__('Security headers')) ?></h2>
+                        <?php if ($observatory['total'] > 0): ?>
+                            <dl class="pv-facts">
+                                <dt><?= $block->escapeHtml(__('Mozilla Observatory grade')) ?></dt>
+                                <dd class="pv-mono pv-tone-<?= $block->escapeHtmlAttr($observatory['tone']) ?>"><?= $block->escapeHtml($observatory['grade']) ?></dd>
+                                <dt><?= $block->escapeHtml(__('Checks passed')) ?></dt>
+                                <dd class="pv-mono"><?= $block->escapeHtml($observatory['passed'] . ' / ' . $observatory['total']) ?></dd>
+                            </dl>
+                            <?php if ($observatory['failed']): ?>
+                                <ul class="pv-list">
+                                    <?php foreach (array_slice($observatory['failed'], 0, 5) as $failure): ?>
+                                        <li>
+                                            <span class="pv-dot pv-bg-warn" aria-hidden="true"></span>
+                                            <span class="pv-mono pv-small"><?= $block->escapeHtml($failure['name']) ?></span>
+                                            <span class="pv-list-value pv-mono">+<?= $block->escapeHtml((string)$failure['points']) ?></span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <p class="pv-card-foot pv-muted"><?= $block->escapeHtml(__('Fixing these gives back %1 points, highest first.', $observatory['points_back'])) ?></p>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('No security scan yet. Every monitor is scanned for security headers, on any plan.')) ?></p>
+                        <?php endif; ?>
+                    </section>
+
+                    <?php $lighthouse = $block->getLighthouse(); ?>
+                    <section class="pv-card" data-pv-capability="quality-report">
+                        <h2><?= $block->escapeHtml(__('Quality report')) ?> <span class="pv-badge"><?= $block->escapeHtml(__('Premium')) ?></span></h2>
+                        <?php if ($lighthouse !== null): ?>
+                            <dl class="pv-facts">
+                                <?php foreach ($lighthouse['scores'] as $score): ?>
+                                    <dt><?= $block->escapeHtml($score['key'] === 'performance' ? __('Performance') : __('Accessibility')) ?></dt>
+                                    <dd class="pv-mono pv-tone-<?= $block->escapeHtmlAttr($score['tone']) ?>"><?= $score['value'] === null ? '–' : $block->escapeHtml((string)$score['value']) ?></dd>
+                                <?php endforeach; ?>
+                                <?php foreach ($lighthouse['vitals'] as $vital): ?>
+                                    <dt><?= $block->escapeHtml(strtoupper($vital['key'])) ?></dt>
+                                    <dd class="pv-mono"><?= $block->escapeHtml($vital['display']) ?></dd>
+                                <?php endforeach; ?>
+                            </dl>
+                            <p class="pv-card-foot pv-muted"><?= $block->escapeHtml(__('Measured on %1.', $lighthouse['device'])) ?></p>
+                        <?php else: ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('Lighthouse performance and accessibility scores with Core Web Vitals, on a paid plan.')) ?></p>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="pv-card" data-pv-capability="checkout-journey">
+                        <h2><?= $block->escapeHtml(__('Can customers actually buy?')) ?> <span class="pv-badge"><?= $block->escapeHtml(__('Premium')) ?></span></h2>
+                        <p class="pv-muted">
+                            <?= $block->escapeHtml(__('Synthetic monitoring walks a real path through your store: product page, add to cart, checkout. It catches the failure an uptime check cannot see, a checkout broken while the homepage still answers fine.')) ?>
+                        </p>
+                        <ul class="pv-checklist">
+                            <li><?= $block->escapeHtml(__('Product page loads')) ?></li>
+                            <li><?= $block->escapeHtml(__('Add to cart works')) ?></li>
+                            <li><?= $block->escapeHtml(__('Checkout reaches payment')) ?></li>
+                        </ul>
+                        <p class="pv-card-foot pv-muted">
+                            <?= $block->escapeHtml(__('This module reports your cart, checkout and product addresses so the journey can be built from what your store actually serves.')) ?>
+                        </p>
+                    </section>
+
+                    <?php $incidents = $block->getIncidents(); ?>
+                    <?php if ($incidents): ?>
+                        <section class="pv-card" data-pv-capability="incidents">
+                            <h2><?= $block->escapeHtml(__('Recent incidents')) ?></h2>
+                            <ul class="pv-list pv-incidents">
+                                <?php foreach ($incidents as $incident): ?>
+                                    <li>
+                                        <span class="pv-dot pv-bg-<?= $incident['resolved'] ? 'ok' : 'bad' ?>" aria-hidden="true"></span>
+                                        <span><?= $block->escapeHtml($incident['title'] !== '' ? $incident['title'] : __('Incident')) ?></span>
+                                        <span class="pv-list-value">
+                                            <span class="pv-tone-<?= $incident['resolved'] ? 'ok' : 'bad' ?>"><?= $block->escapeHtml($incident['resolved'] ? __('Resolved') : __('Open')) ?></span>
+                                            <?php if ($incident['minutes'] !== null): ?><span class="pv-mono"><?= $block->escapeHtml(' · ' . __('%1 min', $incident['minutes'])) ?></span>
+                                            <?php elseif ($incident['hours'] !== null): ?><span class="pv-mono"><?= $block->escapeHtml(' · ' . __('%1 h', $incident['hours'])) ?></span><?php endif; ?>
+                                            <span class="pv-mono pv-block pv-small"><?= $block->escapeHtml($block->formatDateTime($incident['start'])) ?></span>
+                                        </span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </section>
+                    <?php endif; ?>
+
+                    <?php $badge = $block->getStatusBadge(); ?>
+                    <section class="pv-card" data-pv-capability="status-badge">
+                        <h2><?= $block->escapeHtml(__('Status badge')) ?></h2>
+                        <?php if ($badge !== null): ?>
+                            <p><img src="<?= $block->escapeUrl($badge['badge_url']) ?>" alt="<?= $block->escapeHtmlAttr(__('Status badge preview')) ?>"></p>
+                            <pre class="pv-snippet"><code><?= $block->escapeHtml($badge['embed']) ?></code></pre>
+                            <p class="pv-card-foot">
+                                <a href="<?= $block->escapeUrl($badge['page_url']) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Open the status page')) ?></a>
+                            </p>
+                        <?php else: ?>
+                            <p class="pv-muted"><?= $block->escapeHtml(__('A public status page gives customers one place to check for known incidents, and a badge to embed on your storefront.')) ?></p>
+                            <p class="pv-card-foot">
+                                <a href="<?= $block->escapeUrl($block->getStatusPagesUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Create a status page')) ?></a>
+                            </p>
+                        <?php endif; ?>
+                    </section>
+
+                    <?php $account = $block->getAccount(); ?>
+                    <section class="pv-card" data-pv-capability="account-identity">
+                        <h2><?= $block->escapeHtml(__('Your PingView account')) ?></h2>
+                        <dl class="pv-facts">
+                            <dt><?= $block->escapeHtml(__('Account')) ?></dt>
+                            <dd class="pv-mono">
+                                <?= $account['email'] !== null
+                                    ? $block->escapeHtml($account['email'])
+                                    : $block->escapeHtml(__('Not reported by the API yet')) ?>
+                            </dd>
+                            <?php if ($account['team_name'] !== null): ?>
+                                <dt><?= $block->escapeHtml(__('Team')) ?></dt>
+                                <dd>
+                                    <?= $block->escapeHtml($account['team_name']) ?><?php if ($account['team_plan'] !== null): ?> &middot; <?= $block->escapeHtml($account['team_plan']) ?><?php endif; ?>
+                                </dd>
+                            <?php endif; ?>
+                        </dl>
+                        <p class="pv-muted"><?= $block->escapeHtml(__('Signing in uses a link emailed to the account on file, not a password.')) ?></p>
+                        <p class="pv-card-foot">
+                            <a href="<?= $block->escapeUrl($block->getAccountUrl()) ?>" target="_blank" rel="noopener noreferrer"><?= $block->escapeHtml(__('Manage account')) ?></a>
+                        </p>
+                    </section>
+
+                    <section class="pv-card pv-upsell" data-pv-capability="upsell">
+                        <h2><?= $block->escapeHtml(__('See the full picture')) ?></h2>
+                        <p class="pv-muted">
+                            <?= $block->escapeHtml(__('Full incident history, deep performance and security scans, and a public status page you can share with customers.')) ?>
+                        </p>
+                        <p class="pv-card-foot">
+                            <a href="<?= $block->escapeUrl($block->getDashboardUrl()) ?>" class="action-primary pv-primary" target="_blank" rel="noopener noreferrer">
+                                <span><?= $block->escapeHtml(__('Open PingView')) ?></span>
+                            </a>
+                        </p>
+                    </section>
+                </div>
+            </div>
+        <?php else: ?>
+            <section class="pv-card pv-waiting">
+                <h2><?= $block->escapeHtml(__('Monitoring is ready')) ?></h2>
+                <p class="pv-muted"><?= $block->escapeHtml(__('Results will appear after the first external check completes.')) ?></p>
+            </section>
+        <?php endif; ?>
+
+        <footer class="pv-footer">
+            <span><?= $block->escapeHtml(__('PingView for Magento')) ?> <span class="pv-mono">v<?= $block->escapeHtml($block->getVersion()) ?></span><?php if ($block->getConnectedAt() !== ''): ?> &middot; <?= $block->escapeHtml(__('Connected %1', $block->getConnectedAt())) ?><?php endif; ?></span>
+            <?php if ($manage): ?>
+                <form action="<?= $block->escapeUrl($block->getUrl('pingview/dashboard/disconnect')) ?>" method="post">
+                    <?= $block->getBlockHtml('formkey') ?>
+                    <button type="submit" class="pv-disconnect" data-pv-capability="disconnect"><span><?= $block->escapeHtml(__('Disconnect this store')) ?></span></button>
+                </form>
+            <?php endif; ?>
+        </footer>
+
+        <p class="pv-muted pv-small" data-pv-capability="independence">
+            <?= $block->escapeHtml(__('Monitoring runs on PingView servers, outside your store: no module code runs on customer requests, and disabling this module does not stop monitoring.')) ?>
+        </p>
+    <?php endif; ?>
+</div>
