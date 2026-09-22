@@ -124,6 +124,13 @@ Packagist is already registered and the GitHub App installed; nothing to set
 up. `origin` must be `pingview-app/magento2-module` (`git remote -v`) - the old
 private `myusname/magento2-plugin` is `old-origin` and gets nothing.
 
+## Tag already pushed with the wrong content
+
+Do not delete or move it: Packagist keeps what it crawled, and a moved tag
+gives two stores two different 1.2.2s. Fix `main`, then run this skill from
+step 1 with the **next** patch number. The bad version stays listed; nothing
+points stores at it once the newer one exists.
+
 ## Red flags
 
 - "Tag first, fix CI later" - Packagist has already crawled the tag.
