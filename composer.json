@@ -19,8 +19,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/pingview-app/magento2-monitoring/issues",
-        "source": "https://github.com/pingview-app/magento2-monitoring",
+        "issues": "https://github.com/pingview-app/magento2-module/issues",
+        "source": "https://github.com/pingview-app/magento2-module",
         "docs": "https://pingview.app/en/for/magento"
     },
     "require": {
