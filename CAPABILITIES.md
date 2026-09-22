@@ -5,7 +5,7 @@ PingView plugins for WordPress and PrestaShop keep records with the same
 structure, so the three panels can be read side by side and held to the same
 set of capabilities.
 
-Last verified: 2026-09-22 against module 1.2.1.
+Last verified: 2026-09-22 against module 1.2.2.
 
 ## 1. Identity
 
