@@ -36,7 +36,7 @@ route on Cloud, where `app/code` is not writable.
 ## Install from the release archive
 
 For stores that are not Composer-managed. Download
-`pingview-monitoring-1.2.0.zip` from https://pingview.app/en/for/magento and
+`pingview-monitoring-1.2.1.zip` from https://pingview.app/en/for/magento and
 unpack it into `app/code`. The archive already contains the `PingView/Monitoring`
 directory, so the module lands in `app/code/PingView/Monitoring`. Then run the
 same `module:enable` / `setup:upgrade` / `cache:flush` sequence as above.

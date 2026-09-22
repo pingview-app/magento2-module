@@ -8,7 +8,7 @@ use Magento\Framework\Serialize\Serializer\Json;
 
 final class ApiClient
 {
-    public const VERSION = '1.2.0';
+    public const VERSION = '1.2.1';
 
     /**
      * Read timeout. Matches the WordPress plugin's 15s default: these are
